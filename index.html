@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Investor's Dollar Dodge</title>
+    <title>Inflation Evasion: The Money Printer Goes Brrr!</title>
     <style>
-        /* Version 1.5 - 2024-08-02 */
+        /* Version 1.6 - 2024-08-02 */
         :root {
             --background-color: #1a4731;
             --text-color: #fff;
@@ -14,7 +14,7 @@
             --font-family: 'Arial', sans-serif;
         }
 
-        .dollar-dodge {
+        .inflation-evasion {
             font-family: var(--font-family);
             background-color: var(--background-color);
             color: var(--text-color);
@@ -23,13 +23,13 @@
             box-sizing: border-box;
         }
 
-        .dollar-dodge canvas {
+        .inflation-evasion canvas {
             border: 2px solid var(--text-color);
             max-width: 100%;
             background-color: var(--road-color);
         }
 
-        .dollar-dodge button {
+        .inflation-evasion button {
             font-size: 18px;
             padding: 10px 20px;
             margin: 10px;
@@ -67,19 +67,19 @@
         }
 
         @media (max-width: 600px) {
-            .dollar-dodge canvas {
+            .inflation-evasion canvas {
                 width: 100%;
             }
         }
     </style>
 </head>
 <body>
-    <div class="dollar-dodge">
-        <h1>Investor's Dollar Dodge</h1>
-        <canvas id="gameCanvas" width="800" height="400" aria-label="Investor's Dollar Dodge Game" role="img"></canvas>
+    <div class="inflation-evasion">
+        <h1>Inflation Evasion: The Money Printer Goes Brrr!</h1>
+        <canvas id="gameCanvas" width="800" height="400" aria-label="Inflation Evasion Game" role="img"></canvas>
         <br>
         <button id="startButton">Start Game</button>
-        <p>Use arrow keys or WASD to move. Dodge the dollars and survive as long as you can!</p>
+        <p>Use arrow keys or WASD to move. Dodge the inflating dollars and survive as long as you can!</p>
         <p>Score: <span id="score">0</span></p>
     </div>
 
@@ -91,7 +91,7 @@
     </div>
 
     <script>
-        // Version 1.5 - 2024-08-02
+        // Version 1.6 - 2024-08-02
         (function() {
             const canvas = document.getElementById('gameCanvas');
             const ctx = canvas.getContext('2d');
@@ -157,7 +157,7 @@
 
             class Dollar {
                 constructor() {
-                    this.x = canvas.width;
+                    this.x = canvas.width - 50;
                     this.y = Math.random() * (canvas.height - 40) + 20;
                     this.width = 30;
                     this.height = 15;
@@ -177,6 +177,16 @@
                 }
             }
 
+            function drawMoneyPrinter() {
+                ctx.fillStyle = '#888888';
+                ctx.fillRect(canvas.width - 100, 0, 100, canvas.height);
+                ctx.fillStyle = '#333333';
+                ctx.fillRect(canvas.width - 90, canvas.height / 2 - 30, 80, 60);
+                ctx.font = '14px Arial';
+                ctx.fillStyle = '#00FF00';
+                ctx.fillText('BRRR', canvas.width - 70, canvas.height / 2 + 5);
+            }
+
             function init() {
                 player = new Player();
                 obstacles = [];
@@ -188,10 +198,11 @@
             function gameUpdate() {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+                drawMoneyPrinter();
                 player.update();
                 player.draw();
 
-                if (Math.random() < 0.02) {
+                if (Math.random() < 0.05) {
                     obstacles.push(new Dollar());
                 }
 
@@ -317,6 +328,7 @@
             });
 
             init();
+            drawMoneyPrinter();
             player.draw();
         })();
     </script>
