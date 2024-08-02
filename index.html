@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Investor's Dollar Dodge</title>
+    <style>
+        /* Version 1.5 - 2024-08-02 */
+        :root {
+            --background-color: #1a4731;
+            --text-color: #fff;
+            --player-color: #000000;
+            --road-color: #4a4a4a;
+            --font-family: 'Arial', sans-serif;
+        }
+
+        .dollar-dodge {
+            font-family: var(--font-family);
+            background-color: var(--background-color);
+            color: var(--text-color);
+            text-align: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .dollar-dodge canvas {
+            border: 2px solid var(--text-color);
+            max-width: 100%;
+            background-color: var(--road-color);
+        }
+
+        .dollar-dodge button {
+            font-size: 18px;
+            padding: 10px 20px;
+            margin: 10px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+
+        #leaderboard {
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 20px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: none;
+        }
+
+        #leaderboard table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        #leaderboard th, #leaderboard td {
+            padding: 10px;
+            border: 1px solid white;
+        }
+
+        #nameInput {
+            margin-top: 20px;
+            padding: 5px;
+        }
+
+        @media (max-width: 600px) {
+            .dollar-dodge canvas {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dollar-dodge">
+        <h1>Investor's Dollar Dodge</h1>
+        <canvas id="gameCanvas" width="800" height="400" aria-label="Investor's Dollar Dodge Game" role="img"></canvas>
+        <br>
+        <button id="startButton">Start Game</button>
+        <p>Use arrow keys or WASD to move. Dodge the dollars and survive as long as you can!</p>
+        <p>Score: <span id="score">0</span></p>
+    </div>
+
+    <div id="leaderboard">
+        <h2>Leaderboard</h2>
+        <table id="leaderboardTable"></table>
+        <input type="text" id="nameInput" placeholder="Enter your name" maxlength="20" style="display: none;">
+        <button id="submitScore" style="display: none;">Submit Score</button>
+    </div>
+
+    <script>
+        // Version 1.5 - 2024-08-02
+        (function() {
+            const canvas = document.getElementById('gameCanvas');
+            const ctx = canvas.getContext('2d');
+            const startButton = document.getElementById('startButton');
+            const scoreElement = document.getElementById('score');
+            const leaderboardDiv = document.getElementById('leaderboard');
+            const leaderboardTable = document.getElementById('leaderboardTable');
+            const nameInput = document.getElementById('nameInput');
+            const submitScoreButton = document.getElementById('submitScore');
+            let player, obstacles, gameLoop, score, gameStarted;
+            let leaderboard = [];
+
+            class Player {
+                constructor() {
+                    this.x = 50;
+                    this.y = canvas.height / 2;
+                    this.radius = 20;
+                    this.speed = 5;
+                    this.targetY = this.y;
+                }
+
+                draw() {
+                    // Draw investor icon
+                    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--player-color');
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.radius, 0, 2 * Math.PI);
+                    ctx.fill();
+                    
+                    // Draw suit
+                    ctx.fillStyle = '#0000FF';
+                    ctx.fillRect(this.x - 10, this.y + 5, 20, 15);
+                    
+                    // Draw tie
+                    ctx.fillStyle = '#FF0000';
+                    ctx.beginPath();
+                    ctx.moveTo(this.x, this.y + 5);
+                    ctx.lineTo(this.x - 5, this.y + 20);
+                    ctx.lineTo(this.x + 5, this.y + 20);
+                    ctx.fill();
+                }
+
+                move(direction) {
+                    switch(direction) {
+                        case 'up':
+                            this.targetY = Math.max(this.radius, this.targetY - this.speed * 5);
+                            break;
+                        case 'down':
+                            this.targetY = Math.min(canvas.height - this.radius, this.targetY + this.speed * 5);
+                            break;
+                        case 'left':
+                            this.x = Math.max(this.radius, this.x - this.speed);
+                            break;
+                        case 'right':
+                            this.x = Math.min(canvas.width - this.radius, this.x + this.speed);
+                            break;
+                    }
+                }
+
+                update() {
+                    this.y += (this.targetY - this.y) * 0.1;
+                }
+            }
+
+            class Dollar {
+                constructor() {
+                    this.x = canvas.width;
+                    this.y = Math.random() * (canvas.height - 40) + 20;
+                    this.width = 30;
+                    this.height = 15;
+                    this.speed = Math.random() * 2 + 2;
+                }
+
+                draw() {
+                    ctx.fillStyle = '#85bb65';
+                    ctx.fillRect(this.x, this.y, this.width, this.height);
+                    ctx.fillStyle = '#000000';
+                    ctx.font = '12px Arial';
+                    ctx.fillText('$', this.x + 10, this.y + 12);
+                }
+
+                move() {
+                    this.x -= this.speed;
+                }
+            }
+
+            function init() {
+                player = new Player();
+                obstacles = [];
+                score = 0;
+                gameStarted = false;
+                scoreElement.textContent = score;
+            }
+
+            function gameUpdate() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                player.update();
+                player.draw();
+
+                if (Math.random() < 0.02) {
+                    obstacles.push(new Dollar());
+                }
+
+                for (let i = obstacles.length - 1; i >= 0; i--) {
+                    obstacles[i].move();
+                    obstacles[i].draw();
+
+                    if (obstacles[i].x + obstacles[i].width < 0) {
+                        obstacles.splice(i, 1);
+                        score++;
+                        scoreElement.textContent = score;
+                    }
+
+                    if (
+                        player.x + player.radius > obstacles[i].x &&
+                        player.x - player.radius < obstacles[i].x + obstacles[i].width &&
+                        player.y + player.radius > obstacles[i].y &&
+                        player.y - player.radius < obstacles[i].y + obstacles[i].height
+                    ) {
+                        gameOver();
+                        return;
+                    }
+                }
+
+                if (score < 10000) {
+                    gameLoop = requestAnimationFrame(gameUpdate);
+                } else {
+                    gameOver();
+                }
+            }
+
+            function gameOver() {
+                cancelAnimationFrame(gameLoop);
+                ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-color');
+                ctx.font = '48px ' + getComputedStyle(document.documentElement).getPropertyValue('--font-family');
+                ctx.fillText('Game Over!', canvas.width / 2 - 100, canvas.height / 2);
+                startButton.textContent = 'Play Again';
+                gameStarted = false;
+                showLeaderboard();
+            }
+
+            function showLeaderboard() {
+                leaderboardDiv.style.display = 'block';
+                updateLeaderboardTable();
+                if (isTopTen(score)) {
+                    nameInput.style.display = 'block';
+                    submitScoreButton.style.display = 'block';
+                }
+            }
+
+            function updateLeaderboardTable() {
+                leaderboardTable.innerHTML = `
+                    <tr>
+                        <th>Rank</th>
+                        <th>Name</th>
+                        <th>Score</th>
+                    </tr>
+                    ${leaderboard.map((entry, index) => `
+                        <tr>
+                            <td>${index + 1}</td>
+                            <td>${entry.name}</td>
+                            <td>${entry.score}</td>
+                        </tr>
+                    `).join('')}
+                `;
+            }
+
+            function isTopTen(score) {
+                return leaderboard.length < 10 || score > leaderboard[leaderboard.length - 1].score;
+            }
+
+            function addToLeaderboard(name, score) {
+                leaderboard.push({name, score});
+                leaderboard.sort((a, b) => b.score - a.score);
+                if (leaderboard.length > 10) {
+                    leaderboard.pop();
+                }
+                updateLeaderboardTable();
+            }
+
+            function startGame() {
+                init();
+                gameUpdate();
+                gameStarted = true;
+                startButton.textContent = 'Restart';
+                leaderboardDiv.style.display = 'none';
+                nameInput.style.display = 'none';
+                submitScoreButton.style.display = 'none';
+            }
+
+            startButton.addEventListener('click', startGame);
+
+            document.addEventListener('keydown', function(e) {
+                if (gameStarted) {
+                    switch(e.key) {
+                        case 'ArrowUp':
+                        case 'w':
+                            player.move('up');
+                            break;
+                        case 'ArrowDown':
+                        case 's':
+                            player.move('down');
+                            break;
+                        case 'ArrowLeft':
+                        case 'a':
+                            player.move('left');
+                            break;
+                        case 'ArrowRight':
+                        case 'd':
+                            player.move('right');
+                            break;
+                    }
+                } else if (e.key === 'Enter') {
+                    startGame();
+                }
+            });
+
+            submitScoreButton.addEventListener('click', function() {
+                const name = nameInput.value.trim() || 'Anonymous';
+                addToLeaderboard(name, score);
+                nameInput.style.display = 'none';
+                submitScoreButton.style.display = 'none';
+            });
+
+            init();
+            player.draw();
+        })();
+    </script>
+</body>
+</html>
