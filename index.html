@@ -59,6 +59,37 @@
         p {
             font-size: 18px;
         }
+
+        #joystickContainer {
+            position: absolute;
+            bottom: 20%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 100px;
+            background-color: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: none;
+        }
+
+        #joystick {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background-color: rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            top: 25px;
+            left: 25px;
+        }
+
+        @media (max-width: 768px) {
+            #joystickContainer {
+                display: block;
+            }
+            #desktopInstructions {
+                display: none;
+            }
+        }
     </style>
 </head>
 <body>
@@ -67,6 +98,11 @@
         <canvas id="gameCanvas" width="600" height="300"></canvas>
         <button id="startButton">Start Game</button>
         <p>Score: <span id="score">0</span></p>
+        <p id="desktopInstructions">Use arrow keys to move</p>
+    </div>
+
+    <div id="joystickContainer">
+        <div id="joystick"></div>
     </div>
 
     <script>
@@ -74,13 +110,18 @@
         const ctx = canvas.getContext('2d');
         const startButton = document.getElementById('startButton');
         const scoreElement = document.getElementById('score');
+        const joystickContainer = document.getElementById('joystickContainer');
+        const joystick = document.getElementById('joystick');
         let player, obstacles, gameLoop, score, gameStarted;
+        let joystickActive = false;
+        let joystickAngle = 0;
 
         class Player {
             constructor() {
                 this.x = 50;
                 this.y = canvas.height / 2;
                 this.radius = 15;
+                this.speed = 5;
             }
 
             draw() {
@@ -89,11 +130,9 @@
                 ctx.arc(this.x, this.y, this.radius, 0, 2 * Math.PI);
                 ctx.fill();
                 
-                // Draw suit
                 ctx.fillStyle = '#0000FF';
                 ctx.fillRect(this.x - 7, this.y + 5, 14, 10);
                 
-                // Draw tie
                 ctx.fillStyle = '#FF0000';
                 ctx.beginPath();
                 ctx.moveTo(this.x, this.y + 5);
@@ -103,12 +142,20 @@
             }
 
             move(direction) {
-                const speed = 5;
                 switch(direction) {
-                    case 'up': this.y = Math.max(this.radius, this.y - speed); break;
-                    case 'down': this.y = Math.min(canvas.height - this.radius, this.y + speed); break;
-                    case 'left': this.x = Math.max(this.radius, this.x - speed); break;
-                    case 'right': this.x = Math.min(canvas.width - this.radius, this.x + speed); break;
+                    case 'up': this.y = Math.max(this.radius, this.y - this.speed); break;
+                    case 'down': this.y = Math.min(canvas.height - this.radius, this.y + this.speed); break;
+                    case 'left': this.x = Math.max(this.radius, this.x - this.speed); break;
+                    case 'right': this.x = Math.min(canvas.width - this.radius, this.x + this.speed); break;
+                }
+            }
+
+            moveJoystick() {
+                if (joystickActive) {
+                    this.x += Math.cos(joystickAngle) * this.speed;
+                    this.y += Math.sin(joystickAngle) * this.speed;
+                    this.x = Math.max(this.radius, Math.min(canvas.width - this.radius, this.x));
+                    this.y = Math.max(this.radius, Math.min(canvas.height - this.radius, this.y));
                 }
             }
         }
@@ -156,6 +203,7 @@
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
             drawMoneyPrinter();
+            player.moveJoystick();
             player.draw();
 
             if (Math.random() < 0.03) {
@@ -216,6 +264,42 @@
                 }
             }
         });
+
+        // Joystick controls
+        joystickContainer.addEventListener('touchstart', handleJoystickStart);
+        joystickContainer.addEventListener('touchmove', handleJoystickMove);
+        joystickContainer.addEventListener('touchend', handleJoystickEnd);
+
+        function handleJoystickStart(e) {
+            e.preventDefault();
+            joystickActive = true;
+            handleJoystickMove(e);
+        }
+
+        function handleJoystickMove(e) {
+            e.preventDefault();
+            if (joystickActive) {
+                const touch = e.touches[0];
+                const rect = joystickContainer.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+                const deltaX = touch.clientX - centerX;
+                const deltaY = touch.clientY - centerY;
+                joystickAngle = Math.atan2(deltaY, deltaX);
+
+                const maxDistance = rect.width / 2 - joystick.offsetWidth / 2;
+                const distance = Math.min(Math.hypot(deltaX, deltaY), maxDistance);
+                const x = Math.cos(joystickAngle) * distance;
+                const y = Math.sin(joystickAngle) * distance;
+
+                joystick.style.transform = `translate(${x}px, ${y}px)`;
+            }
+        }
+
+        function handleJoystickEnd() {
+            joystickActive = false;
+            joystick.style.transform = 'translate(0px, 0px)';
+        }
 
         init();
         drawMoneyPrinter();
