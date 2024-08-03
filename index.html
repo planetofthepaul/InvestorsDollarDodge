@@ -5,11 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Inflation Evasion: The Money Printer Goes Brrr!</title>
     <style>
-        /* Version 1.8 - 2024-08-02 */
         :root {
             --background-color: #1a4731;
             --text-color: #fff;
-            --player-color: #000000;
+            --player-color: #ffd700;
             --road-color: #4a4a4a;
             --font-family: 'Arial', sans-serif;
         }
@@ -20,26 +19,23 @@
             width: 100%;
             height: 100%;
             overflow: hidden;
-            touch-action: none;
-        }
-
-        .inflation-evasion {
-            font-family: var(--font-family);
             background-color: var(--background-color);
             color: var(--text-color);
-            text-align: center;
-            padding: 10px;
-            box-sizing: border-box;
+            font-family: var(--font-family);
+        }
+
+        .game-container {
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             height: 100vh;
+            text-align: center;
         }
 
-        .inflation-evasion h1 {
+        h1 {
             font-size: 24px;
-            margin-bottom: 10px;
+            margin-bottom: 20px;
         }
 
         #gameCanvas {
@@ -49,7 +45,7 @@
             max-height: 70vh;
         }
 
-        .inflation-evasion button {
+        button {
             font-size: 18px;
             padding: 10px 20px;
             margin: 10px;
@@ -60,371 +56,170 @@
             border-radius: 5px;
         }
 
-        #leaderboard {
-            background-color: rgba(0, 0, 0, 0.7);
-            color: white;
-            padding: 20px;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            display: none;
-            max-width: 90%;
-            max-height: 80%;
-            overflow-y: auto;
-        }
-
-        #leaderboard table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        #leaderboard th, #leaderboard td {
-            padding: 10px;
-            border: 1px solid white;
-        }
-
-        #nameInput {
-            margin-top: 20px;
-            padding: 5px;
-            width: 80%;
-            max-width: 200px;
-        }
-
-        #joystickContainer {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            width: 100px;
-            height: 100px;
-            background-color: rgba(255, 255, 255, 0.2);
-            border-radius: 50%;
-            display: none;
-        }
-
-        #joystick {
-            position: absolute;
-            width: 50px;
-            height: 50px;
-            background-color: rgba(255, 255, 255, 0.5);
-            border-radius: 50%;
-            top: 25px;
-            left: 25px;
-        }
-
-        @media (max-width: 768px) {
-            .inflation-evasion h1 {
-                font-size: 20px;
-            }
-
-            #joystickContainer {
-                display: block;
-            }
+        p {
+            font-size: 18px;
         }
     </style>
 </head>
 <body>
-    <div class="inflation-evasion">
+    <div class="game-container">
         <h1>Inflation Evasion: The Money Printer Goes Brrr!</h1>
-        <canvas id="gameCanvas" width="800" height="400" aria-label="Inflation Evasion Game" role="img"></canvas>
+        <canvas id="gameCanvas" width="600" height="300"></canvas>
         <button id="startButton">Start Game</button>
         <p>Score: <span id="score">0</span></p>
     </div>
 
-    <div id="joystickContainer">
-        <div id="joystick"></div>
-    </div>
-
-    <div id="leaderboard">
-        <h2>Leaderboard</h2>
-        <table id="leaderboardTable"></table>
-        <input type="text" id="nameInput" placeholder="Enter your name" maxlength="20" style="display: none;">
-        <button id="submitScore" style="display: none;">Submit Score</button>
-    </div>
-
     <script>
-        // Version 1.8 - 2024-08-02
-        (function() {
-            const canvas = document.getElementById('gameCanvas');
-            const ctx = canvas.getContext('2d');
-            const startButton = document.getElementById('startButton');
-            const scoreElement = document.getElementById('score');
-            const leaderboardDiv = document.getElementById('leaderboard');
-            const leaderboardTable = document.getElementById('leaderboardTable');
-            const nameInput = document.getElementById('nameInput');
-            const submitScoreButton = document.getElementById('submitScore');
-            const joystickContainer = document.getElementById('joystickContainer');
-            const joystick = document.getElementById('joystick');
-            let player, obstacles, gameLoop, score, gameStarted;
-            let leaderboard = [];
-            let joystickActive = false;
-            let joystickAngle = 0;
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const startButton = document.getElementById('startButton');
+        const scoreElement = document.getElementById('score');
+        let player, obstacles, gameLoop, score, gameStarted;
 
-            function resizeCanvas() {
-                const containerWidth = canvas.parentElement.clientWidth;
-                const containerHeight = canvas.parentElement.clientHeight;
-                const aspectRatio = canvas.width / canvas.height;
-
-                let newWidth = containerWidth - 20; // 20px padding
-                let newHeight = newWidth / aspectRatio;
-
-                if (newHeight > containerHeight * 0.7) {
-                    newHeight = containerHeight * 0.7;
-                    newWidth = newHeight * aspectRatio;
-                }
-
-                canvas.style.width = `${newWidth}px`;
-                canvas.style.height = `${newHeight}px`;
+        class Player {
+            constructor() {
+                this.x = 50;
+                this.y = canvas.height / 2;
+                this.radius = 15;
             }
 
-            class Player {
-                constructor() {
-                    this.x = 50;
-                    this.y = canvas.height / 2;
-                    this.radius = 20;
-                    this.speed = 5;
-                }
-
-                draw() {
-                    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--player-color');
-                    ctx.beginPath();
-                    ctx.arc(this.x, this.y, this.radius, 0, 2 * Math.PI);
-                    ctx.fill();
-                    
-                    ctx.fillStyle = '#0000FF';
-                    ctx.fillRect(this.x - 10, this.y + 5, 20, 15);
-                    
-                    ctx.fillStyle = '#FF0000';
-                    ctx.beginPath();
-                    ctx.moveTo(this.x, this.y + 5);
-                    ctx.lineTo(this.x - 5, this.y + 20);
-                    ctx.lineTo(this.x + 5, this.y + 20);
-                    ctx.fill();
-                }
-
-                move(direction) {
-                    switch(direction) {
-                        case 'up':
-                            this.y = Math.max(this.radius, this.y - this.speed);
-                            break;
-                        case 'down':
-                            this.y = Math.min(canvas.height - this.radius, this.y + this.speed);
-                            break;
-                        case 'left':
-                            this.x = Math.max(this.radius, this.x - this.speed);
-                            break;
-                        case 'right':
-                            this.x = Math.min(canvas.width - this.radius, this.x + this.speed);
-                            break;
-                    }
-                }
-
-                moveJoystick() {
-                    if (joystickActive) {
-                        this.x += Math.cos(joystickAngle) * this.speed;
-                        this.y += Math.sin(joystickAngle) * this.speed;
-                        this.x = Math.max(this.radius, Math.min(canvas.width - this.radius, this.x));
-                        this.y = Math.max(this.radius, Math.min(canvas.height - this.radius, this.y));
-                    }
-                }
+            draw() {
+                ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--player-color');
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, 2 * Math.PI);
+                ctx.fill();
+                
+                // Draw suit
+                ctx.fillStyle = '#0000FF';
+                ctx.fillRect(this.x - 7, this.y + 5, 14, 10);
+                
+                // Draw tie
+                ctx.fillStyle = '#FF0000';
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y + 5);
+                ctx.lineTo(this.x - 3, this.y + 15);
+                ctx.lineTo(this.x + 3, this.y + 15);
+                ctx.fill();
             }
 
-            class Dollar {
-                constructor() {
-                    this.x = canvas.width - 50;
-                    this.y = Math.random() * (canvas.height - 40) + 20;
-                    this.width = 30;
-                    this.height = 15;
-                    this.speed = Math.random() * 2 + 2;
-                }
-
-                draw() {
-                    ctx.fillStyle = '#85bb65';
-                    ctx.fillRect(this.x, this.y, this.width, this.height);
-                    ctx.fillStyle = '#000000';
-                    ctx.font = '12px Arial';
-                    ctx.fillText('$', this.x + 10, this.y + 12);
-                }
-
-                move() {
-                    this.x -= this.speed;
+            move(direction) {
+                const speed = 5;
+                switch(direction) {
+                    case 'up': this.y = Math.max(this.radius, this.y - speed); break;
+                    case 'down': this.y = Math.min(canvas.height - this.radius, this.y + speed); break;
+                    case 'left': this.x = Math.max(this.radius, this.x - speed); break;
+                    case 'right': this.x = Math.min(canvas.width - this.radius, this.x + speed); break;
                 }
             }
+        }
 
-            function drawMoneyPrinter() {
-                ctx.fillStyle = '#888888';
-                ctx.fillRect(canvas.width - 100, 0, 100, canvas.height);
-                ctx.fillStyle = '#333333';
-                ctx.fillRect(canvas.width - 90, canvas.height / 2 - 30, 80, 60);
-                ctx.font = '14px Arial';
-                ctx.fillStyle = '#00FF00';
-                ctx.fillText('BRRR', canvas.width - 70, canvas.height / 2 + 5);
+        class Dollar {
+            constructor() {
+                this.x = canvas.width;
+                this.y = Math.random() * (canvas.height - 20);
+                this.width = 30;
+                this.height = 15;
             }
 
-            function init() {
-                player = new Player();
-                obstacles = [];
-                score = 0;
-                gameStarted = false;
-                scoreElement.textContent = score;
+            draw() {
+                ctx.fillStyle = '#85bb65';
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+                ctx.fillStyle = '#000000';
+                ctx.font = '12px Arial';
+                ctx.fillText('$', this.x + 10, this.y + 12);
             }
 
-            function gameUpdate() {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            move() {
+                this.x -= 3;
+            }
+        }
 
-                drawMoneyPrinter();
-                player.moveJoystick();
-                player.draw();
+        function drawMoneyPrinter() {
+            ctx.fillStyle = '#888888';
+            ctx.fillRect(canvas.width - 60, 0, 60, canvas.height);
+            ctx.fillStyle = '#333333';
+            ctx.fillRect(canvas.width - 55, canvas.height / 2 - 20, 50, 40);
+            ctx.font = '12px Arial';
+            ctx.fillStyle = '#00FF00';
+            ctx.fillText('BRRR', canvas.width - 45, canvas.height / 2 + 5);
+        }
 
-                if (Math.random() < 0.05) {
-                    obstacles.push(new Dollar());
+        function init() {
+            player = new Player();
+            obstacles = [];
+            score = 0;
+            gameStarted = false;
+            scoreElement.textContent = score;
+        }
+
+        function gameUpdate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            drawMoneyPrinter();
+            player.draw();
+
+            if (Math.random() < 0.03) {
+                obstacles.push(new Dollar());
+            }
+
+            obstacles.forEach((obstacle, index) => {
+                obstacle.move();
+                obstacle.draw();
+
+                if (obstacle.x + obstacle.width < 0) {
+                    obstacles.splice(index, 1);
+                    score++;
+                    scoreElement.textContent = score;
                 }
 
-                for (let i = obstacles.length - 1; i >= 0; i--) {
-                    obstacles[i].move();
-                    obstacles[i].draw();
-
-                    if (obstacles[i].x + obstacles[i].width < 0) {
-                        obstacles.splice(i, 1);
-                        score++;
-                        scoreElement.textContent = score;
-                    }
-
-                    if (
-                        player.x + player.radius > obstacles[i].x &&
-                        player.x - player.radius < obstacles[i].x + obstacles[i].width &&
-                        player.y + player.radius > obstacles[i].y &&
-                        player.y - player.radius < obstacles[i].y + obstacles[i].height
-                    ) {
-                        gameOver();
-                        return;
-                    }
-                }
-
-                if (score < 10000) {
-                    gameLoop = requestAnimationFrame(gameUpdate);
-                } else {
+                if (
+                    player.x + player.radius > obstacle.x &&
+                    player.x - player.radius < obstacle.x + obstacle.width &&
+                    player.y + player.radius > obstacle.y &&
+                    player.y - player.radius < obstacle.y + obstacle.height
+                ) {
                     gameOver();
-                }
-            }
-
-            function gameOver() {
-                cancelAnimationFrame(gameLoop);
-                ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-color');
-                ctx.font = '48px ' + getComputedStyle(document.documentElement).getPropertyValue('--font-family');
-                ctx.fillText('Game Over!', canvas.width / 2 - 100, canvas.height / 2);
-                startButton.textContent = 'Play Again';
-                gameStarted = false;
-                showLeaderboard();
-            }
-
-            function showLeaderboard() {
-                leaderboardDiv.style.display = 'block';
-                updateLeaderboardTable();
-                if (isTopTen(score)) {
-                    nameInput.style.display = 'block';
-                    submitScoreButton.style.display = 'block';
-                }
-            }
-
-            function updateLeaderboardTable() {
-                leaderboardTable.innerHTML = `
-                    <tr>
-                        <th>Rank</th>
-                        <th>Name</th>
-                        <th>Score</th>
-                    </tr>
-                    ${leaderboard.map((entry, index) => `
-                        <tr>
-                            <td>${index + 1}</td>
-                            <td>${entry.name}</td>
-                            <td>${entry.score}</td>
-                        </tr>
-                    `).join('')}
-                `;
-            }
-
-            function isTopTen(score) {
-                return leaderboard.length < 10 || score > leaderboard[leaderboard.length - 1].score;
-            }
-
-            function addToLeaderboard(name, score) {
-                leaderboard.push({name, score});
-                leaderboard.sort((a, b) => b.score - a.score);
-                if (leaderboard.length > 10) {
-                    leaderboard.pop();
-                }
-                updateLeaderboardTable();
-            }
-
-            function startGame() {
-                init();
-                gameUpdate();
-                gameStarted = true;
-                startButton.textContent = 'Restart';
-                leaderboardDiv.style.display = 'none';
-                nameInput.style.display = 'none';
-                submitScoreButton.style.display = 'none';
-            }
-
-            startButton.addEventListener('click', startGame);
-
-            document.addEventListener('keydown', function(e) {
-                if (gameStarted) {
-                    switch(e.key) {
-                        case 'ArrowUp':
-                        case 'w':
-                            player.move('up');
-                            break;
-                        case 'ArrowDown':
-                        case 's':
-                            player.move('down');
-                            break;
-                        case 'ArrowLeft':
-                        case 'a':
-                            player.move('left');
-                            break;
-                        case 'ArrowRight':
-                        case 'd':
-                            player.move('right');
-                            break;
-                    }
-                } else if (e.key === 'Enter') {
-                    startGame();
+                    return;
                 }
             });
 
-            // Joystick controls
-            joystickContainer.addEventListener('touchstart', handleJoystickStart);
-            joystickContainer.addEventListener('touchmove', handleJoystickMove);
-            joystickContainer.addEventListener('touchend', handleJoystickEnd);
-
-            function handleJoystickStart(e) {
-                e.preventDefault();
-                joystickActive = true;
-                handleJoystickMove(e);
+            if (gameStarted) {
+                gameLoop = requestAnimationFrame(gameUpdate);
             }
+        }
 
-            function handleJoystickMove(e) {
-                e.preventDefault();
-                if (joystickActive) {
-                    const touch = e.touches[0];
-                    const rect = joystickContainer.getBoundingClientRect();
-                    const centerX = rect.left + rect.width / 2;
-                    const centerY = rect.top + rect.height / 2;
-                    const deltaX = touch.clientX - centerX;
-                    const deltaY = touch.clientY - centerY;
-                    joystickAngle = Math.atan2(deltaY, deltaX);
+        function gameOver() {
+            cancelAnimationFrame(gameLoop);
+            ctx.fillStyle = 'white';
+            ctx.font = '30px Arial';
+            ctx.fillText('Game Over!', canvas.width / 2 - 70, canvas.height / 2);
+            startButton.textContent = 'Play Again';
+            gameStarted = false;
+        }
 
-                    const maxDistance = rect.width / 2 - joystick.offsetWidth / 2;
-                    const distance = Math.min(Math.hypot(deltaX, deltaY), maxDistance);
-                    const x = Math.cos(joystickAngle) * distance;
-                    const y = Math.sin(joystickAngle) * distance;
+        function startGame() {
+            init();
+            gameStarted = true;
+            gameUpdate();
+            startButton.textContent = 'Restart';
+        }
 
-                    joystick.style.transform = `translate(${x}px, ${y}px)`;
+        startButton.addEventListener('click', startGame);
+
+        document.addEventListener('keydown', function(e) {
+            if (gameStarted) {
+                switch(e.key) {
+                    case 'ArrowUp': player.move('up'); break;
+                    case 'ArrowDown': player.move('down'); break;
+                    case 'ArrowLeft': player.move('left'); break;
+                    case 'ArrowRight': player.move('right'); break;
                 }
             }
+        });
 
-            function handleJoystickEnd() {
-                joystickActive = false;
-                joystick.style.
+        init();
+        drawMoneyPrinter();
+        player.draw();
+    </script>
+</body>
+</html>
