@@ -61,8 +61,8 @@
         }
 
         #joystickContainer {
-            position: absolute;
-            bottom: 20%;
+            position: fixed;
+            bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
             width: 100px;
@@ -115,13 +115,14 @@
         let player, obstacles, gameLoop, score, gameStarted;
         let joystickActive = false;
         let joystickAngle = 0;
+        let joystickStrength = 0;
 
         class Player {
             constructor() {
                 this.x = 50;
                 this.y = canvas.height / 2;
                 this.radius = 15;
-                this.speed = 5;
+                this.speed = 2; // Reduced speed for smoother movement
             }
 
             draw() {
@@ -152,8 +153,8 @@
 
             moveJoystick() {
                 if (joystickActive) {
-                    this.x += Math.cos(joystickAngle) * this.speed;
-                    this.y += Math.sin(joystickAngle) * this.speed;
+                    this.x += Math.cos(joystickAngle) * this.speed * joystickStrength;
+                    this.y += Math.sin(joystickAngle) * this.speed * joystickStrength;
                     this.x = Math.max(this.radius, Math.min(canvas.width - this.radius, this.x));
                     this.y = Math.max(this.radius, Math.min(canvas.height - this.radius, this.y));
                 }
@@ -289,6 +290,7 @@
 
                 const maxDistance = rect.width / 2 - joystick.offsetWidth / 2;
                 const distance = Math.min(Math.hypot(deltaX, deltaY), maxDistance);
+                joystickStrength = distance / maxDistance; // Calculate joystick strength
                 const x = Math.cos(joystickAngle) * distance;
                 const y = Math.sin(joystickAngle) * distance;
 
@@ -298,6 +300,7 @@
 
         function handleJoystickEnd() {
             joystickActive = false;
+            joystickStrength = 0;
             joystick.style.transform = 'translate(0px, 0px)';
         }
 
