@@ -122,7 +122,8 @@
                 this.x = 50;
                 this.y = canvas.height / 2;
                 this.radius = 15;
-                this.speed = 2; // Reduced speed for smoother movement
+                this.keyboardSpeed = 5; // Increased speed for keyboard controls
+                this.joystickSpeed = 2.5; // Slightly increased speed for joystick
             }
 
             draw() {
@@ -144,17 +145,17 @@
 
             move(direction) {
                 switch(direction) {
-                    case 'up': this.y = Math.max(this.radius, this.y - this.speed); break;
-                    case 'down': this.y = Math.min(canvas.height - this.radius, this.y + this.speed); break;
-                    case 'left': this.x = Math.max(this.radius, this.x - this.speed); break;
-                    case 'right': this.x = Math.min(canvas.width - this.radius, this.x + this.speed); break;
+                    case 'up': this.y = Math.max(this.radius, this.y - this.keyboardSpeed); break;
+                    case 'down': this.y = Math.min(canvas.height - this.radius, this.y + this.keyboardSpeed); break;
+                    case 'left': this.x = Math.max(this.radius, this.x - this.keyboardSpeed); break;
+                    case 'right': this.x = Math.min(canvas.width - this.radius, this.x + this.keyboardSpeed); break;
                 }
             }
 
             moveJoystick() {
                 if (joystickActive) {
-                    this.x += Math.cos(joystickAngle) * this.speed * joystickStrength;
-                    this.y += Math.sin(joystickAngle) * this.speed * joystickStrength;
+                    this.x += Math.cos(joystickAngle) * this.joystickSpeed * joystickStrength;
+                    this.y += Math.sin(joystickAngle) * this.joystickSpeed * joystickStrength;
                     this.x = Math.max(this.radius, Math.min(canvas.width - this.radius, this.x));
                     this.y = Math.max(this.radius, Math.min(canvas.height - this.radius, this.y));
                 }
@@ -290,7 +291,7 @@
 
                 const maxDistance = rect.width / 2 - joystick.offsetWidth / 2;
                 const distance = Math.min(Math.hypot(deltaX, deltaY), maxDistance);
-                joystickStrength = distance / maxDistance; // Calculate joystick strength
+                joystickStrength = distance / maxDistance;
                 const x = Math.cos(joystickAngle) * distance;
                 const y = Math.sin(joystickAngle) * distance;
 
